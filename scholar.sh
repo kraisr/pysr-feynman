@@ -14,7 +14,7 @@
 set -euo pipefail
 
 module load conda/2024.09
-cd "${PROJECT_DIR:-$HOME/pysr-feynman}"
+cd "${PROJECT_DIR:-$HOME/testing/pysr-feynman}"
 conda activate ./env
 
 mkdir -p slurm_logs

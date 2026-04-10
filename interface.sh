@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PROJECT_DIR="${PROJECT_DIR:-$HOME/pysr-feynman}"
+PROJECT_DIR="${PROJECT_DIR:-$HOME/testing/pysr-feynman}"
 DATA_ROOT="${DATA_ROOT:-data/Feynman_without_units}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-outputs}"
 SEED="${SEED:-0}"
