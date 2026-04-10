@@ -2,7 +2,7 @@
 
 This repository runs [PySR](https://ai.damtp.cam.ac.uk/pysr/dev/) against AI-Feynman-style datasets.
 
-<img width="4740" height="332" alt="workflow" src="https://github.com/user-attachments/assets/2eb0adaa-1102-4f41-b208-d03715f236b9" />
+<img width="197" height="600" alt="workflow" src="https://github.com/user-attachments/assets/7bb4095a-70d4-487a-8c75-cca4c3e05357" />
 
 ## What this repo does
 
