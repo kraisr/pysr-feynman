@@ -1,0 +1,8 @@
+__pycache__/
+.conda-env/
+.venv/
+Feynman_without_units/
+Feynman_without_units.tar.gz
+logs/
+outputs/
+plots/

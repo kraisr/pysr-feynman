@@ -1,0 +1,11 @@
+name: pysr-aifeynman
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - matplotlib>=3.8
+  - numpy>=1.26
+  - pandas>=2.2
+  - pip
+  - pip:
+      - pysr>=1.5.9
