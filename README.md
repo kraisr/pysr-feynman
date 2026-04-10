@@ -133,6 +133,24 @@ This writes PNG files under `plots/`:
 - `curriculum_stage_vs_full_mse.png`
 - `final_stage_boxplot.png`
 
+For a clearer MVP comparison between baseline and curriculum, use:
+
+```bash
+python3 merge_stage_results.py --input-dir outputs/baseline
+python3 merge_stage_results.py --input-dir outputs/curriculum
+
+python3 plot_comparison.py \
+  --baseline-csv outputs/baseline/benchmark_results_merged.csv \
+  --curriculum-csv outputs/curriculum/benchmark_results_merged.csv \
+  --output-dir plots/comparison
+```
+
+This writes:
+
+- `final_mse_comparison.png`
+- `runtime_comparison.png`
+- `comparison_summary.csv`
+
 ## Cluster usage
 
 The `cluster/` directory includes Slurm templates for Purdue Scholar-style workflows:
