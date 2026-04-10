@@ -153,6 +153,37 @@ Example array submission:
 sbatch --array=0-2 --export=PROJECT_DIR=$HOME/pysr-feynman,DATASET_LIST=cluster/datasets_example.txt cluster/run_array_benchmarks.slurm
 ```
 
+For a fast MVP workflow similar to your course skeleton, this repo also includes:
+
+- `scholar.sh`: a CPU-oriented Slurm wrapper that activates the Conda env
+- `interface.sh`: submits baseline and curriculum jobs for each dataset you name
+
+Example:
+
+```bash
+chmod +x interface.sh scholar.sh
+./interface.sh I.6.2 I.12.1 I.16.6
+```
+
+That submits two jobs per dataset:
+
+- baseline PySR run
+- curriculum PySR run
+
+Useful environment overrides:
+
+```bash
+CPUS=8 NITERATIONS=20 POPULATION_SIZE=32 POPULATIONS=4 ./interface.sh I.6.2 I.12.1
+```
+
+By default, `interface.sh` assumes:
+
+- project checkout at `$HOME/pysr-feynman`
+- extracted data under `data/Feynman_without_units/`
+- one seed (`0`)
+- baseline outputs in `outputs/baseline/`
+- curriculum outputs in `outputs/curriculum/`
+
 ## Notes on the sources
 
 - PySR docs: `pip install pysr`, and Julia dependencies are installed at first import.
