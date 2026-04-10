@@ -2,7 +2,7 @@
 
 This repository runs [PySR](https://ai.damtp.cam.ac.uk/pysr/dev/) against AI-Feynman-style datasets.
 
-PySR is a high-performance symbolic regression library built on top of the Julia backend `SymbolicRegression.jl`. The AI-Feynman repository documents its data files as plain numeric tables with one column per variable, separated by spaces, commas, or tabs.
+<img width="4740" height="332" alt="workflow" src="https://github.com/user-attachments/assets/2eb0adaa-1102-4f41-b208-d03715f236b9" />
 
 ## What this repo does
 
