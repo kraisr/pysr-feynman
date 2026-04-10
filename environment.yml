@@ -1,4 +1,4 @@
-name: pysr-aifeynman
+name: pysr-feynman
 channels:
   - conda-forge
 dependencies:
