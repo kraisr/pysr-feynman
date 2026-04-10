@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Run a small batch of PySR benchmarks and aggregate CSV outputs."""
+"""Run a small batch of PySR benchmarks."""
 
 from __future__ import annotations
 
 import argparse
-import csv
 from pathlib import Path
 
 from symbolic_regression import run_from_args
@@ -40,12 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         default="outputs",
-        help="Where run artifacts and aggregate CSV files are written.",
-    )
-    parser.add_argument(
-        "--aggregate-name",
-        default="benchmark_results.csv",
-        help="Filename for the aggregated benchmark CSV under output-dir.",
+        help="Where per-run stage_results.csv files are written.",
     )
 
     # Reuse the training knobs from symbolic_regression.py by parsing
@@ -132,34 +126,15 @@ def build_run_args(base: argparse.Namespace, dataset_path: Path, seed: int) -> a
     )
 
 
-def write_aggregate_csv(rows: list[dict[str, object]], destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if not rows:
-        return
-    fieldnames = list(rows[0].keys())
-    with destination.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-
-
 def main() -> None:
     args = parse_args()
     dataset_paths = load_dataset_paths(args)
-    all_rows: list[dict[str, object]] = []
 
     for dataset_path in dataset_paths:
         for seed in args.seeds:
             print(f"\n### benchmark dataset={dataset_path.name} seed={seed}")
             run_args = build_run_args(args, dataset_path, seed)
-            stage_results = run_from_args(run_args)
-            for result in stage_results:
-                all_rows.append(result.__dict__)
-
-    output_dir = Path(args.output_dir).expanduser().resolve()
-    aggregate_path = output_dir / args.aggregate_name
-    write_aggregate_csv(all_rows, aggregate_path)
-    print(f"\naggregate_csv={aggregate_path}")
+            run_from_args(run_args)
 
 
 if __name__ == "__main__":

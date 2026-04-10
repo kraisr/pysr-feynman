@@ -9,13 +9,14 @@ PySR is a high-performance symbolic regression library built on top of the Julia
 - Loads AI-Feynman-style data files with no header row
 - Lets you choose which column is the target
 - Runs `PySRRegressor` with a practical default operator set
-- Saves the discovered Pareto-front equations and run metadata
+- Saves lightweight per-run `stage_results.csv` files for baseline-vs-curriculum comparison
 
 ## Files
 
 - `symbolic_regression.py`: CLI entry point
 - `run_benchmarks.py`: batch benchmark runner across datasets and seeds
-- `plot_benchmarks.py`: quick plotting utility for aggregate benchmark CSVs
+- `merge_stage_results.py`: merge per-run `stage_results.csv` files into one comparison-ready CSV
+- `plot_comparison.py`: direct baseline-vs-curriculum comparison plots
 - `requirements.txt`: Python dependencies
 
 ## Install with Conda
@@ -62,7 +63,7 @@ python3 symbolic_regression.py \
   --populations 4
 ```
 
-This reuses the same PySR model with warm start across stages and writes one output folder per stage, plus a `curriculum_summary.json` file under the run directory.
+This reuses the same PySR model with warm start across stages and writes one `stage_results.csv` file under the run directory.
 
 Example with a non-final target column:
 
@@ -88,14 +89,9 @@ python3 symbolic_regression.py \
 
 Each run writes to `outputs/<run-id>/`:
 
-- `equations.csv`: the equations table exported from PySR
-- `run_metadata.json`: dataset info, chosen settings, and the best expression
 - `stage_results.csv`: one flat row per training stage for plotting and aggregation
 
-Batch runs created by `run_benchmarks.py` also write:
-
-- `outputs/benchmark_results.csv`: aggregate CSV across all datasets and seeds
-- per-run stage folders and metadata under `outputs/<dataset>_seed<seed>/`
+Batch runs created by `run_benchmarks.py` write one `stage_results.csv` file per dataset/seed under `outputs/<dataset>_seed<seed>/`.
 
 ## Benchmark multiple datasets
 
@@ -119,26 +115,18 @@ python3 run_benchmarks.py \
   --seeds 0 1 2
 ```
 
-## Create plots
+## Create comparison plots
 
-After a benchmark sweep, generate a few quick plots:
-
-```bash
-python3 plot_benchmarks.py --results-csv outputs/benchmark_results.csv
-```
-
-This writes PNG files under `plots/`:
-
-- `runtime_vs_full_mse.png`
-- `curriculum_stage_vs_full_mse.png`
-- `final_stage_boxplot.png`
-
-For a clearer MVP comparison between baseline and curriculum, use:
+After the baseline and curriculum jobs finish, merge each method's run outputs:
 
 ```bash
 python3 merge_stage_results.py --input-dir outputs/baseline
 python3 merge_stage_results.py --input-dir outputs/curriculum
+```
 
+Then generate the side-by-side comparison plots:
+
+```bash
 python3 plot_comparison.py \
   --baseline-csv outputs/baseline/benchmark_results_merged.csv \
   --curriculum-csv outputs/curriculum/benchmark_results_merged.csv \

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import re
 import time
 from dataclasses import dataclass
@@ -307,50 +306,6 @@ def build_model(args: argparse.Namespace, warm_start: bool = False):
     )
 
 
-def save_run_artifacts(
-    output_dir: Path,
-    run_id: str,
-    dataset: DatasetBundle,
-    args: argparse.Namespace,
-    model: Any,
-    *,
-    stage_name: str | None = None,
-    stage_rows: int | None = None,
-    evaluation: dict[str, float] | None = None,
-) -> dict[str, str]:
-    run_dir = output_dir / run_id
-    if stage_name is not None:
-        run_dir = run_dir / stage_name
-    run_dir.mkdir(parents=True, exist_ok=True)
-
-    equations_path = run_dir / "equations.csv"
-    if hasattr(model, "equations_"):
-        model.equations_.to_csv(equations_path, index=False)
-
-    metadata = {
-        "dataset_path": str(dataset.path),
-        "rows": dataset.n_rows,
-        "columns": dataset.n_columns,
-        "feature_names": dataset.feature_names,
-        "target_name": dataset.target_name,
-        "args": vars(args),
-        "stage_name": stage_name,
-        "stage_rows": stage_rows,
-        "best_equation": str(model.sympy()),
-        "latex": str(model.latex()),
-        "evaluation": evaluation,
-    }
-
-    metadata_path = run_dir / "run_metadata.json"
-    metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-
-    return {
-        "run_dir": str(run_dir),
-        "equations": str(equations_path),
-        "metadata": str(metadata_path),
-    }
-
-
 def print_dataset_summary(dataset: DatasetBundle) -> None:
     print(f"dataset={dataset.path}")
     print(f"rows={dataset.n_rows} columns={dataset.n_columns}")
@@ -434,18 +389,6 @@ def evaluate_model(model: Any, X: np.ndarray, y: np.ndarray) -> dict[str, float]
     return {"mse": mse, "mae": mae}
 
 
-def save_curriculum_summary(
-    output_dir: Path,
-    run_id: str,
-    stage_summaries: list[dict[str, Any]],
-) -> str:
-    run_dir = output_dir / run_id
-    run_dir.mkdir(parents=True, exist_ok=True)
-    summary_path = run_dir / "curriculum_summary.json"
-    summary_path.write_text(json.dumps(stage_summaries, indent=2), encoding="utf-8")
-    return str(summary_path)
-
-
 def save_stage_results_csv(
     output_dir: Path,
     run_id: str,
@@ -502,32 +445,12 @@ def run_curriculum_fit(
         complexity, loss, score = _extract_best_equation_stats(model)
         print("\nbest_equation:")
         print(model.sympy())
-        print("\nlatex:")
-        print(model.latex())
-        artifact_paths = save_run_artifacts(
-            output_dir,
-            run_id,
-            dataset,
-            args,
-            model,
-            stage_name=None if stage.row_count == dataset.n_rows else f"stage_01_{stage.row_count}rows",
-            stage_rows=stage.row_count,
-            evaluation={
-                "stage_mse": stage_eval["mse"],
-                "stage_mae": stage_eval["mae"],
-                "full_mse": full_eval["mse"],
-                "full_mae": full_eval["mae"],
-            },
-        )
         print("\nmetrics:")
         print(f"runtime_sec={runtime_sec:.3f}")
         print(f"stage_mse={stage_eval['mse']:.6e}")
         print(f"stage_mae={stage_eval['mae']:.6e}")
         print(f"full_mse={full_eval['mse']:.6e}")
         print(f"full_mae={full_eval['mae']:.6e}")
-        print("\nartifacts:")
-        for key, value in artifact_paths.items():
-            print(f"{key}={value}")
         stage_name = "full" if stage.row_count == dataset.n_rows else f"stage_01_{stage.row_count}rows"
         stage_result = RunStageResult(
             run_id=run_id,
@@ -551,11 +474,10 @@ def run_curriculum_fit(
             score=score,
         )
         csv_path = save_stage_results_csv(output_dir, run_id, [stage_result])
-        print(f"stage_results_csv={csv_path}")
+        print(f"\nstage_results_csv={csv_path}")
         return [stage_result]
 
     model = build_model(args, warm_start=True)
-    stage_summaries: list[dict[str, Any]] = []
     stage_results: list[RunStageResult] = []
 
     for stage in stages:
@@ -579,46 +501,6 @@ def run_curriculum_fit(
         print(f"stage_mae={stage_eval['mae']:.6e}")
         print(f"full_mse={full_eval['mse']:.6e}")
         print(f"full_mae={full_eval['mae']:.6e}")
-
-        artifact_paths = save_run_artifacts(
-            output_dir,
-            run_id,
-            dataset,
-            args,
-            model,
-            stage_name=stage_name,
-            stage_rows=stage.row_count,
-            evaluation={
-                "stage_mse": stage_eval["mse"],
-                "stage_mae": stage_eval["mae"],
-                "full_mse": full_eval["mse"],
-                "full_mae": full_eval["mae"],
-            },
-        )
-        print("artifacts:")
-        for key, value in artifact_paths.items():
-            print(f"{key}={value}")
-
-        stage_summaries.append(
-            {
-                "stage_index": stage.index,
-                "stage_name": stage_name,
-                "stage_label": stage.label,
-                "stage_rows": stage.row_count,
-                "best_equation": str(model.sympy()),
-                "latex": str(model.latex()),
-                "metrics": {
-                    "stage_mse": stage_eval["mse"],
-                    "stage_mae": stage_eval["mae"],
-                    "full_mse": full_eval["mse"],
-                    "full_mae": full_eval["mae"],
-                    "runtime_sec": runtime_sec,
-                    "complexity": complexity,
-                    "loss": loss,
-                    "score": score,
-                },
-            }
-        )
         stage_results.append(
             RunStageResult(
                 run_id=run_id,
@@ -643,10 +525,8 @@ def run_curriculum_fit(
             )
         )
 
-    summary_path = save_curriculum_summary(output_dir, run_id, stage_summaries)
     csv_path = save_stage_results_csv(output_dir, run_id, stage_results)
-    print(f"\ncurriculum_summary={summary_path}")
-    print(f"stage_results_csv={csv_path}")
+    print(f"\nstage_results_csv={csv_path}")
     return stage_results
 
 
