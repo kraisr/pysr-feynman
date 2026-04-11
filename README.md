@@ -1,130 +1,84 @@
 # PySR on AI-Feynman Data
 
-This repository runs [PySR](https://ai.damtp.cam.ac.uk/pysr/dev/) against AI-Feynman-style datasets.
+This repository runs [PySR](https://ai.damtp.cam.ac.uk/pysr/dev/) on AI-Feynman-style datasets and compares a full-data baseline against a curriculum schedule.
 
 <img width="197" height="600" alt="workflow" src="https://github.com/user-attachments/assets/7bb4095a-70d4-487a-8c75-cca4c3e05357" />
 
-## What this repo does
+## Overview
 
-- Loads AI-Feynman-style data files with no header row
-- Lets you choose which column is the target
-- Runs `PySRRegressor` with a practical default operator set
-- Saves lightweight per-run `stage_results.csv` files for baseline-vs-curriculum comparison
+- `symbolic_regression.py`: run PySR on one dataset
+- `run_benchmarks.py`: run multiple datasets
+- `merge_stage_results.py`: merge per-run `stage_results.csv` files
+- `plot_comparison.py`: create side-by-side runtime and MSE plots
+- `interface.sh` and `scholar.sh`: simple Scholar/Slurm submission workflow
 
-## Files
-
-- `symbolic_regression.py`: CLI entry point
-- `run_benchmarks.py`: batch benchmark runner across datasets and seeds
-- `merge_stage_results.py`: merge per-run `stage_results.csv` files into one comparison-ready CSV
-- `plot_comparison.py`: direct baseline-vs-curriculum comparison plots
-- `requirements.txt`: Python dependencies
-
-## Install with Conda
-
-Create the project environment:
+## Setup
 
 ```bash
 conda env create -f environment.yml
-conda activate pysr-aifeynman
+conda activate pysr-feynman
 ```
 
-Install note:
+On first import, PySR installs its Julia-side dependencies automatically.
 
-- `environment.yml` installs the Python stack with Conda and `pysr` via `pip`.
-- On first import, PySR sets up its Julia dependencies automatically.
-- If Julia is already installed and you want PySR to use it, set `JULIA_EXE` before running.
+## Run One Dataset
 
-## Run on AI-Feynman data
-
-If you already have a local AI-Feynman dataset file, run:
-
-```bash
-python3 symbolic_regression.py \
-  --data /path/to/example1.txt \
-  --vars-name x0 x1 x2 x3 y \
-  --niterations 100 \
-  --population-size 64 \
-  --populations 12
-```
-
-The default assumption is that the last column is the target. If your target is somewhere else, pass `--target-column`.
-
-## Curriculum over dataset size
-
-For quicker MVP experiments on large Feynman files, you can run PySR on progressively larger nested subsets:
-
-```bash
-python3 symbolic_regression.py \
-  --data /path/to/example1.txt \
-  --vars-name x0 x1 y \
-  --curriculum-rows 1000 10000 100000 full \
-  --niterations 20 \
-  --population-size 32 \
-  --populations 4
-```
-
-This reuses the same PySR model with warm start across stages and writes one `stage_results.csv` file under the run directory.
-
-Example with a non-final target column:
+Baseline:
 
 ```bash
 python3 symbolic_regression.py \
   --data /path/to/data.txt \
-  --target-column 0 \
-  --vars-name y x0 x1 x2
-```
-
-## Dry run
-
-Use this to verify parsing and column naming before starting a PySR search:
-
-```bash
-python3 symbolic_regression.py \
-  --data /path/to/example1.txt \
-  --vars-name x0 x1 x2 x3 y \
-  --dry-run
-```
-
-## Outputs
-
-Each run writes to `outputs/<run-id>/`:
-
-- `stage_results.csv`: one flat row per training stage for plotting and aggregation
-
-Batch runs created by `run_benchmarks.py` write one `stage_results.csv` file per dataset/seed under `outputs/<dataset>_seed<seed>/`.
-
-## Benchmark multiple datasets
-
-Run a small sweep over several Feynman files and seeds:
-
-```bash
-python3 run_benchmarks.py \
-  --datasets Feynman_without_units/I.6.2 Feynman_without_units/I.12.1 \
-  --seeds 0 1 2 \
-  --curriculum-rows 1000 10000 100000 full \
+  --vars-name x0 x1 y \
   --niterations 20 \
   --population-size 32 \
   --populations 4
 ```
 
-You can also point it at a text file with one dataset path per line:
+Curriculum:
+
+```bash
+python3 symbolic_regression.py \
+  --data /path/to/data.txt \
+  --vars-name x0 x1 y \
+  --curriculum-rows 1000 10000 full \
+  --niterations 20 \
+  --population-size 32 \
+  --populations 4
+```
+
+Dry run:
+
+```bash
+python3 symbolic_regression.py \
+  --data /path/to/data.txt \
+  --vars-name x0 x1 y \
+  --dry-run
+```
+
+If the target is not the last column, pass `--target-column`.
+
+## Benchmark Workflow
+
+Run a small sweep:
 
 ```bash
 python3 run_benchmarks.py \
-  --dataset-list cluster/datasets_example.txt \
-  --seeds 0 1 2
+  --datasets data/Feynman_without_units/I.6.2 data/Feynman_without_units/I.12.1 \
+  --seeds 0 \
+  --curriculum-rows 1000 10000 full \
+  --niterations 10 \
+  --population-size 24 \
+  --populations 3
 ```
 
-## Create comparison plots
-
-After the baseline and curriculum jobs finish, merge each method's run outputs:
+Merge results:
 
 ```bash
 python3 merge_stage_results.py --input-dir outputs/baseline
 python3 merge_stage_results.py --input-dir outputs/curriculum
 ```
 
-Then generate the side-by-side comparison plots:
+Create comparison plots:
 
 ```bash
 python3 plot_comparison.py \
@@ -139,58 +93,39 @@ This writes:
 - `runtime_comparison.png`
 - `comparison_summary.csv`
 
-## Cluster usage
+## Outputs
 
-The `cluster/` directory includes Slurm templates for Purdue Scholar-style workflows:
+Each run writes:
 
-- `cluster/run_single_benchmark.slurm`: run one dataset benchmark job
-- `cluster/run_array_benchmarks.slurm`: run one dataset per Slurm array task
-- `cluster/datasets_example.txt`: sample dataset list for array jobs
+- `outputs/<run-id>/stage_results.csv`
 
-Example single-job submission:
+The merged workflow writes:
 
-```bash
-sbatch --export=PROJECT_DIR=$HOME/pysr-feynman,DATASET_PATH=Feynman_without_units/I.6.2 cluster/run_single_benchmark.slurm
-```
+- `outputs/<method>/benchmark_results_merged.csv`
+- comparison plots under your chosen output directory
 
-Example array submission:
+## Scholar / Slurm
 
-```bash
-sbatch --array=0-2 --export=PROJECT_DIR=$HOME/pysr-feynman,DATASET_LIST=cluster/datasets_example.txt cluster/run_array_benchmarks.slurm
-```
-
-For a fast MVP workflow similar to your course skeleton, this repo also includes:
-
-- `scholar.sh`: a CPU-oriented Slurm wrapper that activates the Conda env
-- `interface.sh`: submits baseline and curriculum jobs for each dataset you name
-
-Example:
+Submit baseline and curriculum jobs for selected datasets:
 
 ```bash
 chmod +x interface.sh scholar.sh
-./interface.sh I.6.2 I.12.1 I.16.6
+PROJECT_DIR=/home/<username>/pysr-feynman ./interface.sh I.6.2 I.12.1 I.16.6
 ```
 
-That submits two jobs per dataset:
-
-- baseline PySR run
-- curriculum PySR run
-
-Useful environment overrides:
+Useful overrides:
 
 ```bash
-CPUS=8 NITERATIONS=20 POPULATION_SIZE=32 POPULATIONS=4 ./interface.sh I.6.2 I.12.1
+CPUS=8 NITERATIONS=10 POPULATION_SIZE=24 POPULATIONS=3 ./interface.sh I.6.2 I.12.1
 ```
 
-By default, `interface.sh` assumes:
+By default, `interface.sh` expects:
 
-- project checkout at `$HOME/pysr-feynman`
+- the repo at `$HOME/pysr-feynman`
 - extracted data under `data/Feynman_without_units/`
-- one seed (`0`)
-- baseline outputs in `outputs/baseline/`
-- curriculum outputs in `outputs/curriculum/`
+- baseline outputs under `outputs/baseline/`
+- curriculum outputs under `outputs/curriculum/`
 
-## Notes on the sources
+## Data Format
 
-- PySR docs: `pip install pysr`, and Julia dependencies are installed at first import.
-- AI-Feynman docs: dataset files are plain numeric tables with columns separated by spaces, commas, or tabs.
+AI-Feynman files are plain numeric tables with no header row. Columns can be separated by spaces, commas, or tabs.
