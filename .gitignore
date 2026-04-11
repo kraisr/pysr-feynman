@@ -5,5 +5,5 @@ Feynman_without_units/
 Feynman_without_units.tar.gz
 logs/
 outputs/
-plots/
 env
+.DS_Store
